@@ -539,6 +539,14 @@ function Carousel(rail){
   if(matchMedia("(pointer:coarse)").matches || innerWidth<=900){
     rail.classList.add("native"); cat.classList.add("noloop");
     rail._car = { measure(){}, step(d){ rail.scrollBy({left:d*rail.clientWidth*.7,behavior:"smooth"}); } };
+    /* mouse também arrasta (o dedo já rola sozinho) */
+    let down = false, sx0 = 0, sl0 = 0, mv = 0;
+    rail.addEventListener("pointerdown",e=>{ if(e.pointerType!=="mouse"||e.button!==0) return; down = true; mv = 0; sx0 = e.clientX; sl0 = rail.scrollLeft; rail.style.scrollSnapType = "none"; rail.style.cursor = "grabbing"; });
+    addEventListener("pointermove",e=>{ if(!down) return; const dx = e.clientX-sx0; mv = Math.max(mv,Math.abs(dx)); rail.scrollLeft = sl0-dx; });
+    const end = ()=>{ if(!down) return; down = false; rail.style.scrollSnapType = ""; rail.style.cursor = ""; };
+    addEventListener("pointerup",end); addEventListener("pointercancel",end);
+    rail.addEventListener("click",e=>{ if(mv>6){ e.preventDefault(); e.stopPropagation(); mv = 0; } },true);
+    rail.style.cursor = "grab";
     return;
   }
   const before = set.cloneNode(true), after = set.cloneNode(true);

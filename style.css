@@ -547,3 +547,14 @@ body{overflow-x:clip}
 .rail.native .set{gap:14px}
 .rail.native .item{flex:0 0 66vw;max-width:300px;scroll-snap-align:start}
 .rail.native .set::after{content:"";flex:0 0 2px}
+
+/* celular: foto inteira + descrição no topo, opções logo abaixo (tudo rola junto); fechar sempre visível */
+@media (max-width:760px){
+  .sheet-scrim{height:100vh;height:100dvh}
+  .sheet{display:block;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;max-height:92vh;max-height:calc(100dvh - 24px);grid-template-columns:none;grid-template-rows:none}
+  .sheet-x{position:sticky;top:10px;display:block;margin:10px 12px -48px auto;right:auto;z-index:5;background:#000c;border:1px solid #ffffff33}
+  .sheet-photo{display:block;position:relative;width:100%;aspect-ratio:4/3;margin:0;border-radius:0}
+  .sheet-main{display:block}
+  .sheet-scroll{overflow:visible;padding:18px 18px 6px}
+  .sheet-foot{position:sticky;bottom:0;z-index:4;box-shadow:0 -10px 24px #000a}
+}

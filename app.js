@@ -327,7 +327,7 @@ function build(){
   });
   floor = document.createElement("div"); floor.className = "floor"; stage.prepend(floor);
   if(!reduce){ fxc = document.createElement("canvas"); fxc.className = "fx"; stage.appendChild(fxc); fxx = fxc.getContext("2d"); }
-  ready = true; size(); start();
+  ready = true; tStart = performance.now(); size(); start();
 }
 if(SRC.complete) build(); else SRC.onload = build;
 
@@ -354,6 +354,7 @@ function progress(){
   return reduce ? 1 : clamp(-hero.getBoundingClientRect().top/total);
 }
 function frame(now){
+  if(!ready){ last = now; requestAnimationFrame(frame); return; }  /* imagem ainda carregando: espera, sem quebrar */
   const dtAll = Math.min(.25,(now-last)/1000), dt = Math.min(.05,dtAll); last = now;
   monitorFps(now);
   const time = (now-tStart)/1000, P = progress();
@@ -403,7 +404,10 @@ new IntersectionObserver(([en])=>{ visible = en.isIntersecting; if(visible) star
 addEventListener("resize",size);
 addEventListener("pointermove",e=>{ tmx = e.clientX/innerWidth*2-1; tmy = e.clientY/innerHeight*2-1; },{passive:true});
 if(reduce){ addEventListener("scroll",()=>start(),{passive:true}); }
-const vid = document.querySelector(".bgvideo"); if(reduce) vid.removeAttribute("autoplay");
+const vid = document.querySelector(".bgvideo");
+/* o vídeo só começa a baixar depois que a página terminou de carregar (senão o navegador fica "carregando" no celular) */
+if(!reduce){ let vgo = false; const go = ()=>{ if(vgo) return; vgo = true; vid.src = vid.dataset.src; vid.play().catch(()=>{}); };
+  if(document.readyState==="complete") setTimeout(go,300); else addEventListener("load",()=>setTimeout(go,300)); setTimeout(go,4000); }
 
 renderStatus(); renderHours(); renderCart(); filterMenu();
 setInterval(renderStatus,60000);
@@ -585,6 +589,10 @@ function Carousel(rail){
 document.querySelectorAll(".rail").forEach(Carousel);
 addEventListener("resize",()=>document.querySelectorAll(".rail").forEach(r=>r._car.measure()));
 addEventListener("load",()=>document.querySelectorAll(".rail").forEach(r=>r._car.measure()));
+/* celular: o tamanho da tela pode mudar depois do início (barra do Safari, fontes); remede sempre que o trilho mudar */
+if("ResizeObserver" in window){ const ro = new ResizeObserver(()=>document.querySelectorAll(".rail").forEach(r=>r._car.measure())); document.querySelectorAll(".rail").forEach(r=>ro.observe(r)); }
+[300,1200,3000].forEach(t=>setTimeout(()=>document.querySelectorAll(".rail").forEach(r=>r._car.measure()),t));
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>document.querySelectorAll(".rail").forEach(r=>r._car.measure()));
 
 /* ============ PROMOÇÃO (vem do painel admin) ============ */
 (function(){

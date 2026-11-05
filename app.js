@@ -1,3 +1,5 @@
+if('scrollRestoration' in history) history.scrollRestoration = 'manual';
+if(!location.hash) window.scrollTo(0,0);
 ﻿/* ============ DADOS (copiados do cardápio da Kero+ no Cardápio Web) ============ */
 const COMBOS = [
   {n:"Combo P - Smash",d:"2 Smash K+, porção de batata M, 2 refrigerantes lata da sua escolha",p:57,tag:"P"},
@@ -352,7 +354,8 @@ function progress(){
   return reduce ? 1 : clamp(-hero.getBoundingClientRect().top/total);
 }
 function frame(now){
-  const dt = Math.min(.033,(now-last)/1000); last = now;
+  const dtAll = Math.min(.25,(now-last)/1000), dt = Math.min(.05,dtAll); last = now;
+  monitorFps(now);
   const time = (now-tStart)/1000, P = progress();
   mx += (tmx-mx)*.06; my += (tmy-my)*.06;
   let heat = 0, all = true;
@@ -360,10 +363,10 @@ function frame(now){
     const k = N-1-i, s = st[i];
     const T = reduce ? 1 : sm(clamp((P-(0.02+k*0.075))/0.16));
     // mola principal
-    const a = K*(T-s.u) - C*s.v; s.v += a*dt; s.u += s.v*dt;
-    // mola de entrada
     const eT = time > .15+i*.11 ? 1 : 0;
-    s.ev += (KE*(eT-s.e) - CE*s.ev)*dt; s.e += s.ev*dt;
+    for(let rem = dtAll; rem>1e-4;){ const h = Math.min(1/60,rem); rem -= h;
+      s.v += (K*(T-s.u) - C*s.v)*h; s.u += s.v*h;
+      s.ev += (KE*(eT-s.e) - CE*s.ev)*h; s.e += s.ev*h; }
     if(reduce){ s.u = 1; s.e = 1; }
     const u = s.u, uc = clamp(u), free = 1-uc;
     const ey = L.y + L.h/2 - CENTER;
@@ -748,3 +751,21 @@ function shClick(e){
   }
   document.querySelector("#openLogin").addEventListener("click",open);
 })();
+
+/* ============ MODO LEVE (aparelhos fracos) ============ */
+var fpsN = 0, fpsT0 = 0, fpsChecks = 0, lite = false;
+function goLite(){
+  if(lite) return; lite = true; document.documentElement.classList.add("lite");
+  if(fxc){ fxc.remove(); fxc = null; }
+}
+function monitorFps(now){
+  if(lite || fpsChecks>=3 || reduce || now<5000) return;
+  if(!fpsT0){ fpsT0 = now; fpsN = 0; return; }
+  fpsN++;
+  const span = now-fpsT0;
+  if(span>1500){
+    if(!document.hidden && span<4000 && fpsN/(span/1000) < 28) goLite();
+    fpsChecks++; fpsT0 = now; fpsN = 0;
+  }
+}
+if(navigator.hardwareConcurrency && navigator.hardwareConcurrency<=2) goLite();

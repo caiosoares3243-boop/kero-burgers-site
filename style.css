@@ -525,3 +525,12 @@ body{overflow-x:clip}
 
 .brand{flex:none}.brand img{flex:none}.promo-chip{white-space:nowrap}
 @media (max-width:560px){.top{gap:8px;padding:0 12px}.promo-chip{padding:6px 10px;font-size:12px}.cart-btn{padding:9px 14px}.login-btn,.cart-btn,.promo-chip{margin-left:0}.promo-chip{margin-left:auto}}
+
+/* modo leve */
+.lite .hero-pin::after{display:none}
+.lite .layer{filter:none}
+.lite .glow{box-shadow:none}
+.lite .top{backdrop-filter:none;background:#080604}
+.lite .cur-dot,.lite .cur-ring{display:none}
+.lite .promo-rays,.lite .ember::before,.lite .fav-ring,.lite .seal-text,.lite .brand img,.lite .promo-chip{animation:none}
+.lite .scrim,.lite .promo-scrim,.lite .sheet-scrim{backdrop-filter:none}

@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Painel · Kero+ Burger's</title>
+<link rel="icon" href="assets/logo.jpg">
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  body{min-height:100vh}
+  .adm{width:min(980px,100% - 32px);margin:0 auto;padding:32px 0 80px}
+  .adm-top{display:flex;align-items:center;gap:14px;margin-bottom:28px}
+  .adm-top img{border-radius:50%;border:2px solid var(--orange)}
+  .adm-top h1{font:400 22px var(--display)}
+  .adm-top a{margin-left:auto;color:var(--flame);font-weight:600;text-decoration:none}
+  .login{max-width:380px;margin:18vh auto 0;text-align:center}
+  .login h1{font:400 28px var(--display);margin:16px 0 6px}
+  .login p{color:var(--muted);margin-bottom:20px}
+  .login input,.adm input[type=text],.adm input[type=number],.adm input[type=datetime-local],.adm textarea,.adm select{width:100%;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:12px 14px;outline:0;font:inherit}
+  .adm textarea{min-height:84px;resize:vertical}
+  .adm input:focus,.adm textarea:focus,.adm select:focus,.login input:focus{border-color:var(--orange)}
+  .err{color:var(--bad);min-height:1.4em;margin-top:10px;font-size:14px}
+  .grid2{display:grid;grid-template-columns:1.1fr .9fr;gap:20px;align-items:start}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:26px}
+  .panel h2{font:400 18px var(--display);color:var(--flame);margin-bottom:18px}
+  .status-row{display:flex;align-items:center;gap:16px;padding:16px 18px;border-radius:16px;background:var(--bg);border:1px solid var(--line);margin-bottom:22px}
+  .status-row b{display:block;font-size:18px}
+  .status-row small{color:var(--muted)}
+  .switch{margin-left:auto;position:relative;width:64px;height:36px;flex:none}
+  .switch input{position:absolute;inset:0;opacity:0;cursor:pointer;z-index:2;width:100%;height:100%}
+  .switch span{position:absolute;inset:0;border-radius:36px;background:#3a3025;transition:background .25s}
+  .switch span::after{content:"";position:absolute;left:4px;top:4px;width:28px;height:28px;border-radius:50%;background:#fff;transition:translate .25s cubic-bezier(.3,1.5,.5,1)}
+  .switch input:checked+span{background:var(--orange);box-shadow:0 0 20px #e6850a88}
+  .switch input:checked+span::after{translate:28px 0}
+  .switch input:focus-visible+span{outline:3px solid var(--flame);outline-offset:3px}
+  .live-dot{width:12px;height:12px;border-radius:50%;background:#5a4d3d;flex:none}
+  .live .live-dot{background:var(--ok);box-shadow:0 0 12px var(--ok)}
+  .field{display:grid;gap:6px;margin-bottom:16px}
+  .field label{font-weight:600;font-size:14px}
+  .field small{color:var(--muted);font-size:12.5px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .acts{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px}
+  .btn.sec{background:transparent;color:var(--text);border-color:#e6850a88}
+  .btn.sec:hover{background:#e6850a22;box-shadow:none}
+  .toast{position:fixed;left:50%;bottom:28px;translate:-50% 20px;background:var(--panel2);border:1px solid var(--orange);border-radius:12px;padding:12px 20px;opacity:0;pointer-events:none;transition:all .3s;z-index:500}
+  .toast.show{opacity:1;translate:-50% 0}
+  .toast.bad{border-color:var(--bad)}
+  .tip{color:var(--muted);font-size:14px;line-height:1.5}
+  .tip li{margin-bottom:8px}
+  @media (max-width:800px){.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<main id="loginView" class="login" hidden>
+  <img src="assets/logo.jpg" alt="" width="72" height="72" style="border-radius:50%;border:2px solid var(--orange);margin:0 auto">
+  <h1>Painel da Kero+</h1>
+  <p>Digite o PIN para gerenciar as promoções.</p>
+  <form id="loginForm">
+    <input id="pin" type="password" placeholder="PIN do painel" autocomplete="current-password" aria-label="PIN do painel" required>
+    <p class="err" id="loginErr" role="alert"></p>
+    <button class="btn full" type="submit">Entrar</button>
+  </form>
+</main>
+
+<main id="panelView" class="adm" hidden>
+  <header class="adm-top">
+    <img src="assets/logo.jpg" alt="" width="44" height="44">
+    <h1>Painel · Promoções</h1>
+    <a href="./" target="_blank" rel="noopener">Abrir o site</a>
+    <button class="btn sec" id="logout" style="padding:8px 16px">Sair</button>
+  </header>
+
+  <p id="localNote" class="panel" hidden style="margin-bottom:20px;border-color:#e6850a88"><b style="color:var(--flame)">Modo demonstração.</b> Neste endereço a promoção fica salva só neste navegador. Ligue a chave, salve e abra o site na mesma aba ou em outra aba deste navegador para ver o pop-up.</p>
+
+  <div class="grid2">
+    <section class="panel">
+      <div class="status-row" id="statusRow">
+        <span class="live-dot" aria-hidden="true"></span>
+        <div><b id="stTitle">Promoção desligada</b><small id="stSub">Os clientes não veem nenhum pop-up.</small></div>
+        <label class="switch" title="Ligar ou desligar a promoção">
+          <input type="checkbox" id="fActive" role="switch" aria-label="Promoção no ar">
+          <span></span>
+        </label>
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label for="fType">Tipo de desconto</label>
+          <select id="fType"><option value="pct">Porcentagem (%)</option><option value="off">Valor em reais (R$)</option></select>
+        </div>
+        <div class="field">
+          <label for="fValue" id="valueLabel">Desconto (%)</label>
+          <input id="fValue" type="number" min="1" step="1" value="10">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="fCode">Código do cupom</label>
+        <input id="fCode" type="text" maxlength="20" autocomplete="off" value="KERO10">
+        <small>O cliente recebe o desconto aplicado automaticamente na sacola. O código aparece no pop-up.</small>
+      </div>
+      <div class="field">
+        <label for="fTitle">Título do pop-up</label>
+        <input id="fTitle" type="text" maxlength="60" value="Parabéns!">
+      </div>
+      <div class="field">
+        <label for="fMsg">Mensagem</label>
+        <textarea id="fMsg" maxlength="220">Você acabou de ganhar {desconto} de desconto em qualquer pedido.</textarea>
+        <small>Use <b>{desconto}</b> para mostrar o valor (por exemplo, 10%).</small>
+      </div>
+      <div class="field">
+        <label for="fEnds">Termina em (opcional)</label>
+        <input id="fEnds" type="datetime-local">
+        <small>Deixe vazio para não ter prazo. Com data, o pop-up mostra uma contagem regressiva e a promoção sai do ar sozinha.</small>
+      </div>
+
+      <div class="acts">
+        <button class="btn" id="save">Salvar e publicar</button>
+        <button class="btn sec" id="preview" type="button">Ver pop-up</button>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <h2>Como funciona</h2>
+      <ul class="tip">
+        <li>Ligue a chave e clique em <b>Salvar e publicar</b>. Em até 15 segundos quem está no site recebe o pop-up. Quem entrar depois já vê ao abrir.</li>
+        <li>O desconto entra sozinho na sacola do cliente, em qualquer pedido.</li>
+        <li>Cada visita vê o pop-up uma vez. Se você salvar de novo, ele aparece outra vez para todos.</li>
+        <li>Desligue a chave para tirar a promoção do ar na hora.</li>
+        <li><b>Ver pop-up</b> mostra aqui como o cliente vai ver, sem publicar nada.</li>
+      </ul>
+    </aside>
+  </div>
+</main>
+
+<div class="toast" id="toast" role="status"></div>
+<script src="promo.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>

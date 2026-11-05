@@ -541,3 +541,9 @@ body{overflow-x:clip}
 .rail.native .track{transform:none!important;will-change:auto}
 .rail.native .set{scroll-snap-align:none;padding-right:0}
 .rail.native .item{scroll-snap-align:start}
+
+/* celular: card maior, o próximo aparece cortado na lateral para indicar que há mais */
+.rail.native{scroll-snap-type:x mandatory;scroll-padding-inline:16px;padding-inline:16px}
+.rail.native .set{gap:14px}
+.rail.native .item{flex:0 0 66vw;max-width:300px;scroll-snap-align:start}
+.rail.native .set::after{content:"";flex:0 0 2px}

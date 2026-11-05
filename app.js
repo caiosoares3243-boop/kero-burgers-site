@@ -535,6 +535,12 @@ function fxStep(dt,time,heat,all){
    movem um alvo; a posição acompanha o alvo com amortecimento, e soltar dá inércia. */
 function Carousel(rail){
   const track = rail.querySelector(".track"), set = track.querySelector(".set"), cat = rail.closest(".cat");
+  /* celular/tablet: rolagem nativa do dedo (mais confiável no iPhone), sem trilho infinito */
+  if(matchMedia("(pointer:coarse)").matches || innerWidth<=900){
+    rail.classList.add("native"); cat.classList.add("noloop");
+    rail._car = { measure(){}, step(d){ rail.scrollBy({left:d*rail.clientWidth*.7,behavior:"smooth"}); } };
+    return;
+  }
   const before = set.cloneNode(true), after = set.cloneNode(true);
   [before,after].forEach(s=>{ s.setAttribute("aria-hidden","true"); s.querySelectorAll("button,a").forEach(b=>b.tabIndex = -1); });
   track.prepend(before); track.append(after);

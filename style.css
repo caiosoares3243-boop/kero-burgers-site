@@ -534,3 +534,10 @@ body{overflow-x:clip}
 .lite .cur-dot,.lite .cur-ring{display:none}
 .lite .promo-rays,.lite .ember::before,.lite .fav-ring,.lite .seal-text,.lite .brand img,.lite .promo-chip{animation:none}
 .lite .scrim,.lite .promo-scrim,.lite .sheet-scrim{backdrop-filter:none}
+
+/* rolagem nativa no celular */
+.rail.native{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;touch-action:auto;padding:6px 16px 20px;scrollbar-width:none;-webkit-mask-image:none;mask-image:none}
+.rail.native::-webkit-scrollbar{display:none}
+.rail.native .track{transform:none!important;will-change:auto}
+.rail.native .set{scroll-snap-align:none;padding-right:0}
+.rail.native .item{scroll-snap-align:start}

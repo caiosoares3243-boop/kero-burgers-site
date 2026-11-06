@@ -273,137 +273,89 @@ $("#zone").addEventListener("change",e=>{
   r.innerHTML = `Taxa: <strong>${+fee===0?"Grátis":brl(+fee)}</strong><br>Tempo estimado: ${time} min`;
 });
 
-/* ============ HERO: HAMBÚRGUER MONTA COM O SCROLL ============ */
-const SRC = new Image(); SRC.src = "assets/burger.webp";
-const CROP_X = 150, CROP_W = 450;
-const LAYERS = [ /* de cima para baixo */
-  {y:88, h:146, ay:-168, dx: 60, rot:-9},
-  {y:240,h:142, ay:-100, dx:-70, rot: 7},
-  {y:384,h:116, ay:-62,  dx: 50, rot:-6},
-  {y:500,h:118, ay:-12,  dx:-40, rot: 5},
-  {y:618,h:210, ay:30,   dx: 70, rot:-7},
-  {y:828,h:142, ay:110,  dx:-30, rot: 4},
-];
-const SPAN = 882, CENTER = 529, N = LAYERS.length;
-const stage = $("#stage"), hero = $(".hero"), steps = [...document.querySelectorAll("#steps li")];
-const glow = document.querySelector(".glow");
+/* ============ HERO: O HAMBÚRGUER CAI E MONTA CONFORME A ROLAGEM ============ */
+/* 115 quadros com fundo transparente (WebP). A rolagem escolhe o quadro; o movimento é suavizado
+   e dois quadros vizinhos são misturados, então nada pula nem fica translúcido quando para. */
+const hero = $(".hero"), steps = [...document.querySelectorAll("#steps li")], glow = document.querySelector(".glow");
 const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-let els = [], S = 1, ready = false, floor;
-
-/* tira o fundo preto de verdade: acha o fundo ligado às bordas da faixa (flood fill),
-   mantém o interior do ingrediente opaco, corrói 2px (some a franja escura) e suaviza a borda */
-function keyLayer(d,w,h){
-  const n = w*h, bg = new Uint8Array(n), q = new Int32Array(n); let qh = 0, qt = 0;
-  const mx = i => Math.max(d[i*4],d[i*4+1],d[i*4+2]);
-  const push = i => { if(!bg[i] && mx(i)<34){ bg[i] = 1; q[qt++] = i; } };
-  for(let x=0;x<w;x++){ push(x); push((h-1)*w+x); }
-  for(let y=0;y<h;y++){ push(y*w); push(y*w+w-1); }
-  while(qh<qt){ const i = q[qh++], x = i%w, y = (i/w)|0; if(x>0) push(i-1); if(x<w-1) push(i+1); if(y>0) push(i-w); if(y<h-1) push(i+w); }
-  let a = new Float32Array(n);
-  for(let i=0;i<n;i++) a[i] = (bg[i] || mx(i)<10) ? 0 : 1;
-  for(let pass=0;pass<2;pass++){
-    const e = new Float32Array(n);
-    for(let y=0;y<h;y++) for(let x=0;x<w;x++){ const i = y*w+x; let v = a[i];
-      if(x>0) v = Math.min(v,a[i-1]); if(x<w-1) v = Math.min(v,a[i+1]); if(y>0) v = Math.min(v,a[i-w]); if(y<h-1) v = Math.min(v,a[i+w]); e[i] = v; }
-    a = e;
-  }
-  for(let y=0;y<h;y++) for(let x=0;x<w;x++){
-    let s = 0, c = 0;
-    for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++){ const xx = x+dx, yy = y+dy; if(xx>=0&&xx<w&&yy>=0&&yy<h){ s += a[yy*w+xx]; c++; } }
-    d[(y*w+x)*4+3] = (s/c)*255;
-  }
-}
-
-/* recorta cada camada e transforma o fundo preto em transparência (uma vez só) */
-function build(){
-  els = LAYERS.map((L,i)=>{
-    const cv = document.createElement("canvas"); cv.width = CROP_W; cv.height = L.h; cv.className = "layer"; cv.style.zIndex = N-i;
-    const x = cv.getContext("2d",{willReadFrequently:true});
-    x.drawImage(SRC,CROP_X,L.y,CROP_W,L.h,0,0,CROP_W,L.h);
-    const im = x.getImageData(0,0,CROP_W,L.h), d = im.data;
-    keyLayer(d,CROP_W,L.h);
-    x.putImageData(im,0,0);
-    stage.appendChild(cv); return cv;
-  });
-  floor = document.createElement("div"); floor.className = "floor"; stage.prepend(floor);
-  if(!reduce){ fxc = document.createElement("canvas"); fxc.className = "fx"; stage.appendChild(fxc); fxx = fxc.getContext("2d"); }
-  ready = true; tStart = performance.now(); size(); start();
-}
-if(SRC.complete) build(); else SRC.onload = build;
-
 const clamp = (v,a=0,b=1)=>Math.min(b,Math.max(a,v));
 const sm = t=>t*t*(3-2*t);
-function size(){
-  if(!ready) return;
-  const r = stage.getBoundingClientRect();
-  S = Math.min(r.height*(innerWidth<=900?0.84:0.94)/SPAN, r.width*0.92/CROP_W);
-  els.forEach((e,i)=>{ e.style.width = CROP_W*S+"px"; e.style.height = LAYERS[i].h*S+"px"; });
-  floor.style.width = CROP_W*S*0.8+"px"; floor.style.height = 60*S+"px";
-  floor.style.top = `calc(50% + ${(LAYERS[N-1].ay+110)*S}px)`;
-  fxSize();
-}
+const heroCopy = document.querySelector(".hero-copy"), pin = document.querySelector(".hero-pin");
+const cv = $("#burgerCv"), cx = cv.getContext("2d");
+const PRE = 12+17, N = 115+PRE, FPS = 24, ANIM_END = .88;  /* PRE = quadros de entrada (pão caindo + alface vindo de cima); a animação termina em 88% da rolagem, o resto é pausa */
+const DIR = "assets/" + (matchMedia("(max-width:900px)").matches ? "burger-frames-s" : "burger-frames") + "/";
+const STEP_AT = [14,...[1.1,1.6,3.0,3.8,4.4].map(s=>s*FPS+PRE)]; /* quadro em que cada ingrediente assenta */
+const DONE_AT = N-4;
+const frames = new Array(N);
+let pos = 0, target = 0, raf = 0, last = 0, W = 0, H = 0, heroDone = false;
 
-/* cada camada é uma mola: o scroll só define o alvo, a física faz o movimento (suave, com peso e leve quique) */
-const st = LAYERS.map((L,i)=>({u:0,v:0,e:0,ev:0,done:false}));
-let target = 0, tStart = performance.now(), last = tStart, running = false, visible = true;
-let mx = 0, my = 0, tmx = 0, tmy = 0, lastAll = false;
-const K = 62, C = 9.4;           // rigidez e amortecimento (quique de ~7%)
-const KE = 34, CE = 10;          // entrada ao carregar a página
-function progress(){
-  const total = hero.offsetHeight - innerHeight;
-  return reduce ? 1 : clamp(-hero.getBoundingClientRect().top/total);
+function setDone(on){
+  if(on===heroDone) return; heroDone = on;
+  $("#final").classList.toggle("show",on); heroCopy.classList.toggle("done",on);
+  $("#h1").innerHTML = on ? `Se a fome bateu,<br>o Kero+ resolveu` : `Burger que<br>você quer<span class="plus">+</span>`;
+  $("#lede").textContent = on ? "Burger artesanal, batata crocante e entrega em Barra do Choça. É só escolher e pedir pelo WhatsApp." : "";
 }
-function frame(now){
-  if(!ready){ last = now; requestAnimationFrame(frame); return; }  /* imagem ainda carregando: espera, sem quebrar */
-  const dtAll = Math.min(.25,(now-last)/1000), dt = Math.min(.05,dtAll); last = now;
-  monitorFps(now);
-  const time = (now-tStart)/1000, P = progress();
-  mx += (tmx-mx)*.06; my += (tmy-my)*.06;
-  let heat = 0, all = true;
-  LAYERS.forEach((L,i)=>{
-    const k = N-1-i, s = st[i];
-    const T = reduce ? 1 : sm(clamp((P-(0.02+k*0.075))/0.16));
-    // mola principal
-    const eT = time > .15+i*.11 ? 1 : 0;
-    for(let rem = dtAll; rem>1e-4;){ const h = Math.min(1/60,rem); rem -= h;
-      s.v += (K*(T-s.u) - C*s.v)*h; s.u += s.v*h;
-      s.ev += (KE*(eT-s.e) - CE*s.ev)*h; s.e += s.ev*h; }
-    if(reduce){ s.u = 1; s.e = 1; }
-    const u = s.u, uc = clamp(u), free = 1-uc;
-    const ey = L.y + L.h/2 - CENTER;
-    const side = L.dx>0?1:-1;
-    const bob = Math.sin(time*1.15+i*1.4)*6*free, sway = Math.sin(time*.8+i*2.1)*1.6*free;
-    const arc = Math.sin(uc*Math.PI)*-side*38;
-    const g = 1 + .22*sm(uc);
-    const y = (ey + (L.ay-ey)*u + bob)*S*g + (1-clamp(s.e))*-S*260;
-    const x = (L.dx*.9*free + arc + mx*(i-2.5)*5)*S*g;
-    const rz = L.rot*free + sway - s.v*side*1.6;
-    const rx = free*(i%2?13:-11) + (my*-3);
-    const ry = free*side*-20 + mx*4;
-    const stretch = 1 + clamp(s.v*.018,-.05,.06) - Math.max(0,u-1)*.9;
-    const op = clamp(s.e*1.4);
-    els[i].style.opacity = op;
-    els[i].style.transform = `translate3d(calc(-50% + ${x}px), calc(-50% + ${y}px), 0) rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(${rz}deg) scale(${(1-(stretch-1)*.4)*g}, ${stretch*g})`;
-    heat += uc; if(uc<.97) all = false;
-    steps[k] && steps[k].classList.toggle("on", s.u>.55);
+function frameAt(i){
+  i = clamp(i,0,N-1);
+  for(let j=i;j>=0;j--) if(frames[j]) return frames[j];
+  for(let j=i;j<N;j++) if(frames[j]) return frames[j];
+  return null;
+}
+function put(im,a){
+  if(!im||a<=0) return;
+  const s = Math.min(W/im.naturalWidth, H/im.naturalHeight), w = im.naturalWidth*s, h = im.naturalHeight*s;
+  cx.globalAlpha = a; cx.drawImage(im,(W-w)/2,(H-h)/2,w,h);
+}
+function draw(){
+  if(!W) return;
+  cx.globalCompositeOperation = "source-over"; cx.globalAlpha = 1; cx.clearRect(0,0,W,H);
+  const i = Math.floor(pos), f = pos-i;
+  if(f<.004 || i>=N-1){ put(frameAt(Math.round(pos)),1); return; }
+  cx.globalCompositeOperation = "lighter";            /* mistura correta de quadros com transparência */
+  put(frameAt(i),1-f); put(frameAt(i+1),f);
+  cx.globalCompositeOperation = "source-over"; cx.globalAlpha = 1;
+}
+function ui(){
+  steps.forEach((li,i)=>li.classList.toggle("on",pos>=STEP_AT[i]));
+  setDone(pos>=DONE_AT);
+  glow.style.opacity = (.3 + .7*sm(clamp(pos/DONE_AT))).toFixed(3);
+}
+function tick(now){
+  const dt = Math.min(.05,(now-last)/1000||.016); last = now;
+  pos += (target-pos)*(1-Math.exp(-dt*7));            /* amortecimento: desliza em vez de pular */
+  if(Math.abs(target-pos)<.015) pos = target;
+  draw(); ui();
+  raf = pos!==target ? requestAnimationFrame(tick) : 0;
+}
+function kick(){ if(!raf){ last = performance.now(); raf = requestAnimationFrame(tick); } }
+function onScroll(){
+  const total = Math.max(1,hero.offsetHeight-pin.offsetHeight);
+  target = clamp(-hero.getBoundingClientRect().top/total/ANIM_END)*(N-1);
+  kick();
+}
+function resize(){
+  const r = cv.getBoundingClientRect(), d = Math.min(devicePixelRatio||1,2);
+  W = Math.round(r.width*d); H = Math.round(r.height*d); cv.width = W; cv.height = H;
+  cx.imageSmoothingQuality = "high"; draw();
+}
+function loadFrame(i){
+  return new Promise(res=>{
+    const im = new Image(); im.decoding = "async";
+    im.onload = ()=>{ frames[i] = im; if(i===0) cv.classList.add("ready"); draw(); res(); };
+    im.onerror = ()=>res();
+    im.src = DIR+"f"+String(i+1).padStart(3,"0")+".webp";
   });
-  heat /= N;
-  glow.style.opacity = .35+heat*.65; glow.style.transform = `scale(${.92+heat*.1})`;
-  floor.style.opacity = heat*heat;
-  fxStep(dt,time,heat,all);
-  $("#final").classList.toggle("show",all);
-  if(all!==lastAll){
-    lastAll = all; document.querySelector(".hero-copy").classList.toggle("done",all);
-    $("#h1").innerHTML = all ? `Se a fome bateu,<br>o Kero+ resolveu` : `Burger que<br>você quer<span class="plus">+</span>`;
-    $("#lede").textContent = all ? "Burger artesanal, batata crocante e entrega em Barra do Choça. É só escolher e pedir pelo WhatsApp." : "";
-  }
-  if(running && visible && !reduce) requestAnimationFrame(frame); else running = false;
 }
-function start(){ if(!running){ running = true; last = performance.now(); requestAnimationFrame(frame); } }
-new IntersectionObserver(([en])=>{ visible = en.isIntersecting; if(visible) start(); }).observe(hero);
-addEventListener("resize",size);
-addEventListener("pointermove",e=>{ tmx = e.clientX/innerWidth*2-1; tmy = e.clientY/innerHeight*2-1; },{passive:true});
-if(reduce){ addEventListener("scroll",()=>start(),{passive:true}); }
+function loadAll(){
+  const order = [0,...Array.from({length:N-1},(_,k)=>k+1)];
+  let next = 0; const worker = async()=>{ while(next<order.length) await loadFrame(order[next++]); };
+  for(let k=0;k<6;k++) worker();
+}
+addEventListener("resize",resize);
+addEventListener("scroll",onScroll,{passive:true});
+resize(); loadAll();
+if(reduce){ pos = target = N-1; cv.classList.add("ready"); steps.forEach(li=>li.classList.add("on")); setDone(true); glow.style.opacity = 1; draw(); }
+else{ glow.style.opacity = .3; onScroll(); }
 const vid = document.querySelector(".bgvideo");
 /* o vídeo só começa a baixar depois que a página terminou de carregar (senão o navegador fica "carregando" no celular) */
 if(!reduce){ let vgo = false; const go = ()=>{ if(vgo) return; vgo = true; vid.src = vid.dataset.src; vid.play().catch(()=>{}); };
@@ -455,38 +407,7 @@ if(!COMBOS.length){ document.querySelector("#destaques")?.remove(); document.que
 
 
 
-/* ============ FAÍSCAS E VAPOR SOBRE O HAMBÚRGUER ============ */
-var fxc = null, fxx = null, fxW = 0, fxH = 0, fxDpr = 1, SP = [], SM = [], fxAcc = 0, fxAccS = 0;
-function fxSize(){
-  if(!fxc) return;
-  const r = stage.getBoundingClientRect();
-  fxDpr = Math.min(2, devicePixelRatio || 1); fxW = r.width; fxH = r.height;
-  fxc.width = fxW*fxDpr; fxc.height = fxH*fxDpr; fxc.style.width = fxW+"px"; fxc.style.height = fxH+"px";
-}
-function fxStep(dt,time,heat,all){
-  if(!fxc || reduce) return;
-  fxx.setTransform(fxDpr,0,0,fxDpr,0,0); fxx.clearRect(0,0,fxW,fxH);
-  const cx = fxW/2, cy = fxH/2, bw = CROP_W*S*1.22, gs = 1+.22*heat;
-  fxAcc += dt*(4+heat*20);
-  while(fxAcc>1){ fxAcc--; SP.push({x:cx+(Math.random()-.5)*bw*.9, y:cy+(40+Math.random()*130)*S*gs, vx:(Math.random()-.5)*14, vy:-(40+Math.random()*90), life:0, max:1.6+Math.random()*2.4, r:.8+Math.random()*1.8, ph:Math.random()*6}); }
-  if(all){ fxAccS += dt*1.3; while(fxAccS>1){ fxAccS--; SM.push({x:cx+(Math.random()-.5)*bw*.35, y:cy-150*S*1.22, vx:(Math.random()-.5)*10, vy:-(18+Math.random()*16), life:0, max:3.2+Math.random()*1.8, r:14+Math.random()*10}); } }
-  fxx.globalCompositeOperation = "source-over";
-  for(let i=SM.length-1;i>=0;i--){
-    const p = SM[i]; p.life += dt; if(p.life>p.max){ SM.splice(i,1); continue; }
-    const t = p.life/p.max; p.x += (p.vx+Math.sin(time*.9+i)*6)*dt; p.y += p.vy*dt;
-    const r = p.r*(1+t*3.2), a = .15*Math.sin(Math.PI*t), g = fxx.createRadialGradient(p.x,p.y,0,p.x,p.y,r);
-    g.addColorStop(0,`rgba(235,225,210,${a})`); g.addColorStop(1,"rgba(235,225,210,0)");
-    fxx.fillStyle = g; fxx.fillRect(p.x-r,p.y-r,r*2,r*2);
-  }
-  fxx.globalCompositeOperation = "lighter";
-  for(let i=SP.length-1;i>=0;i--){
-    const p = SP[i]; p.life += dt; if(p.life>p.max){ SP.splice(i,1); continue; }
-    const t = p.life/p.max; p.x += (p.vx+Math.sin(time*2+p.ph)*10)*dt; p.y += p.vy*dt;
-    const a = Math.sin(Math.PI*t)*.9;
-    fxx.fillStyle = `rgba(255,${150+Math.round(80*(1-t))},50,${a*.25})`; fxx.beginPath(); fxx.arc(p.x,p.y,p.r*3,0,6.283); fxx.fill();
-    fxx.fillStyle = `rgba(255,${190+Math.round(50*(1-t))},90,${a})`; fxx.beginPath(); fxx.arc(p.x,p.y,p.r,0,6.283); fxx.fill();
-  }
-}
+var fxc = null;
 
 /* ============ CURSOR LARANJA + BOTÕES MAGNÉTICOS ============ */
 (function(){

@@ -34,9 +34,9 @@ button,input,select{font:inherit;color:inherit}
 /* hero */
 .hero{height:210vh;position:relative}
 .hero-pin{background:var(--bg);position:sticky;top:0;height:100vh;min-height:480px;overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:center;padding:var(--head) clamp(20px,6vw,96px) 0}
-.glow{position:absolute;right:6%;top:50%;width:min(70vh,60vw);aspect-ratio:1;translate:0 -50%;border-radius:50%;
-  background:radial-gradient(circle,#e6850a40 0%,#e6850a14 45%,transparent 70%);
-  border:2px solid #ffb43a55;box-shadow:0 0 60px #e6850a55,inset 0 0 60px #e6850a33;pointer-events:none}
+.glow{position:absolute;right:2%;top:50%;width:min(92vh,70vw);aspect-ratio:1;translate:0 -50%;border-radius:50%;
+  background:radial-gradient(circle,#e6850a5c 0%,#e6850a30 30%,#e6850a14 50%,#e6850a06 62%,transparent 72%);
+  pointer-events:none}
 .hero-copy{position:relative;z-index:2;max-width:640px}
 .kicker{color:var(--flame);font-weight:600;font-size:15px;margin-bottom:18px;min-height:24px;transition:opacity .25s}
 h1{font:400 clamp(40px,min(6.4vw,11.5vh),92px)/1 var(--display);letter-spacing:-.01em}
@@ -578,3 +578,9 @@ body{overflow-x:clip}
   .rail.native .set{gap:12px}
   .rail.native .photo{aspect-ratio:1/1}
 }
+
+/* hero: o hambúrguer cai e monta conforme a rolagem (quadros com fundo transparente num canvas) */
+.hero{height:300vh}
+.stage{perspective:none;top:0}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;opacity:0;transition:opacity .5s ease}
+.stage canvas.ready{opacity:1}

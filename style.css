@@ -75,8 +75,8 @@ h2{font:400 clamp(32px,4.6vw,56px)/1.05 var(--display)}
 .price{font:400 26px var(--display);color:var(--flame)}
 
 /* menu */
-.menu-bar{position:sticky;top:var(--head);z-index:30;display:flex;gap:16px;align-items:center;margin:28px 0 8px;padding:12px 0;background:linear-gradient(var(--bg) 85%,transparent)}
-.tabs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;flex:1;padding:2px}
+.menu-bar{position:relative;z-index:30;flex-wrap:wrap;display:flex;gap:16px;align-items:center;margin:28px 0 8px;padding:12px 0;background:linear-gradient(var(--bg) 85%,transparent)}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;flex:1 1 420px;min-width:0;padding:2px}
 .tabs::-webkit-scrollbar{display:none}
 .tab{flex:none;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:9px 18px;font-weight:600;font-size:15px;cursor:pointer;color:var(--muted);transition:all .2s}
 .tab:hover{color:var(--text);border-color:#e6850a88}

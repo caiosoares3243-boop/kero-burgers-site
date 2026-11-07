@@ -304,7 +304,8 @@ function frameAt(i){
 function put(im,a){
   if(!im||a<=0) return;
   const s = Math.min(W/im.naturalWidth, H/im.naturalHeight), w = im.naturalWidth*s, h = im.naturalHeight*s;
-  cx.globalAlpha = a; cx.drawImage(im,(W-w)/2,(H-h)/2,w,h);
+  const e = 3, nw = im.naturalWidth, nh = im.naturalHeight;   /* corta a borda do quadro (some a linha retangular) */
+  cx.globalAlpha = a; cx.drawImage(im,e,e,nw-2*e,nh-2*e,(W-w)/2+e*s,(H-h)/2+e*s,w-2*e*s,h-2*e*s);
 }
 function draw(){
   if(!W) return;
@@ -328,7 +329,13 @@ function tick(now){
   raf = pos!==target ? requestAnimationFrame(tick) : 0;
 }
 function kick(){ if(!raf){ last = performance.now(); raf = requestAnimationFrame(tick); } }
+const topBar = document.getElementById("top");
+function headerSlide(){            /* o menu de cima fica fixo durante a animação e só sobe junto com a página depois dela */
+  const end = hero.offsetTop+hero.offsetHeight-innerHeight;
+  topBar.style.transform = "translateY("+(-Math.max(0,scrollY-end))+"px)";
+}
 function onScroll(){
+  headerSlide();
   const total = Math.max(1,hero.offsetHeight-pin.offsetHeight);
   target = clamp(-hero.getBoundingClientRect().top/total/ANIM_END)*(N-1);
   kick();
@@ -351,7 +358,7 @@ function loadAll(){
   let next = 0; const worker = async()=>{ while(next<order.length) await loadFrame(order[next++]); };
   for(let k=0;k<6;k++) worker();
 }
-addEventListener("resize",resize);
+addEventListener("resize",resize); addEventListener("resize",headerSlide); headerSlide();
 addEventListener("scroll",onScroll,{passive:true});
 resize(); loadAll();
 if(reduce){ pos = target = N-1; cv.classList.add("ready"); steps.forEach(li=>li.classList.add("on")); setDone(true); glow.style.opacity = 1; draw(); }
